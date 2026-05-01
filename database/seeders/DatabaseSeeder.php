@@ -1,0 +1,97 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Ong;
+use App\Models\User;
+use App\Models\Animal;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // 1. Super Admin (O "Dono" do SaaS)
+        User::withoutEvents(function () {
+            User::create([
+                'name' => 'Super Admin SaaS',
+                'email' => 'admin@meusaas.com',
+                'password' => Hash::make('senha123'),
+                'ong_id' => null,
+            ]);
+        });
+
+        // 2. ONG 1 - Cão Feliz
+        $ong1 = Ong::create([
+            'id' => Str::uuid(),
+            'slug' => 'caofeliz',
+            'name' => 'ONG Cão Feliz',
+            'cnpj' => '11111111111111',
+            'email' => 'contato@caofeliz.com.br',
+            'whatsapp' => '11999999999',
+            'branding' => ['primary_color' => '#FF5733'],
+            'is_active' => true,
+        ]);
+
+        User::create([
+            'name' => 'Gestor Cão Feliz',
+            'email' => 'gestor@caofeliz.com.br',
+            'password' => Hash::make('senha123'),
+            'ong_id' => $ong1->id,
+        ]);
+
+        // Animal para ONG 1
+        Animal::create([
+            'ong_id' => $ong1->id,
+            'name' => 'Rex',
+            'species' => 'dog',
+            'gender' => 'male',
+            'size' => 'large',
+            'arrival_date' => now()->subMonths(2),
+            'estimated_birth_date' => now()->subYears(3),
+            'is_neutered' => true,
+            'is_vaccinated' => true,
+            'status' => 'available',
+            'description' => 'Um cão muito brincalhão e protetor.'
+        ]);
+
+        // 3. ONG 2 - Gato Mestre
+        $ong2 = Ong::create([
+            'id' => Str::uuid(),
+            'slug' => 'gatomestre',
+            'name' => 'Abrigo Gato Mestre',
+            'cnpj' => '22222222222222',
+            'email' => 'contato@gatomestre.com.br',
+            'whatsapp' => '22999999999',
+            'branding' => ['primary_color' => '#8E44AD'],
+            'is_active' => true,
+        ]);
+
+        User::create([
+            'name' => 'Diretora Gato Mestre',
+            'email' => 'diretora@gatomestre.com.br',
+            'password' => Hash::make('senha123'),
+            'ong_id' => $ong2->id,
+        ]);
+
+        // Animal para ONG 2
+        Animal::create([
+            'ong_id' => $ong2->id,
+            'name' => 'Mingau',
+            'species' => 'cat',
+            'gender' => 'female',
+            'size' => 'small',
+            'arrival_date' => now()->subDays(15),
+            'estimated_birth_date' => now()->subMonths(6),
+            'is_neutered' => false,
+            'is_vaccinated' => true,
+            'status' => 'foster_care',
+            'description' => 'Uma gatinha dócil que adora colo.'
+        ]);
+    }
+}
