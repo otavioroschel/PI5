@@ -3,29 +3,18 @@
 namespace App\Models;
 
 use App\Models\Traits\BelongsToOng;
+use Illuminate\Database\Eloquent\Concerns\HasUuids; // 1. Import do UUID nativo
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Casts\Attribute; // 2. Import do Accessor moderno
+use Illuminate\Support\Facades\Storage; // 3. Import do Storage
 use Carbon\Carbon;
 
 class Animal extends Model
 {
-    use HasFactory, SoftDeletes, BelongsToOng;
-
-    // 1. Configura o UUID como chave primária
-    protected $keyType = 'string';
-    public $incrementing = false;
-
-    protected static function boot()
-    {
-        parent::boot();
-        static::creating(function ($model) {
-            if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = (string) Str::uuid();
-            }
-        });
-    }
+    // Substituímos a configuração manual do UUID pela Trait HasUuids nativa do Laravel
+    use HasFactory, SoftDeletes, BelongsToOng, HasUuids;
 
     // 2. Campos que podem ser preenchidos em massa
     protected $fillable = [
@@ -56,10 +45,25 @@ class Animal extends Model
         'weight' => 'decimal:2',
     ];
 
-    // 4. Atributos Dinâmicos (Accessors)
-    // Isso cria um campo virtual "age" que o React vai amar
-    protected $appends = ['age_display'];
+    // 4. Atributos Dinâmicos (Accessors) que serão injetados no JSON para o React
+    // Adicionamos o 'photo_url' aqui!
+    protected $appends = ['age_display', 'photo_url'];
 
+    /**
+     * Gera a URL pública da foto usando o disco 'public'.
+     * O React lerá isso como 'animal.photo_url'
+     */
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->photo_path ? Storage::url($this->photo_path) : null,
+        );
+    }
+
+    /**
+     * Calcula a idade formatada.
+     * O React lerá isso como 'animal.age_display'
+     */
     public function getAgeDisplayAttribute()
     {
         if (!$this->estimated_birth_date) {

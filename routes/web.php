@@ -28,10 +28,21 @@ Route::middleware('auth')->group(function () {
 });
 
 // Rotas de registro de animais
+// Rotas de registro de animais (Protegidas por Autenticação e Isolamento de Tenant)
 Route::middleware(['auth', 'tenant'])->group(function () {
+    
+    // 1. Listagem (Tabela e Cards)
     Route::get('/animals', [AnimalController::class, 'index'])->name('animals.index');
-    Route::get('/animals/create', [AnimalController::class, 'create'])->name('animals.create');
+    
+    // 2. Criar novo (Vindo do Modal de Criação)
     Route::post('/animals', [AnimalController::class, 'store'])->name('animals.store');
+    
+    // 3. Atualizar existente (Vindo do Modal de Edição)
+    Route::put('/animals/{animal}', [AnimalController::class, 'update'])->name('animals.update');
+    
+    // 4. Excluir (Soft Delete da Lixeira)
+    Route::delete('/animals/{animal}', [AnimalController::class, 'destroy'])->name('animals.destroy');
+
 });
 
 require __DIR__.'/auth.php';

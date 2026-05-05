@@ -4,49 +4,115 @@ namespace App\Http\Controllers;
 
 use App\Models\Animal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class AnimalController extends Controller
 {
-    // 1. Lista os animais 
     public function index()
     {
-        // O Tenant já filtrou tudo por ONG automaticamente
+        // O Global Scope (Trait BelongsToOng) filtra automaticamente por ONG
         $animals = Animal::all();
 
-        // Passamos os dados direto para o React
         return Inertia::render('Animals/Index', [
             'animals' => $animals
         ]);
     }
 
-    // 2. Abre a tela do formulário vazio
-    public function create()
-    {
-        return Inertia::render('Animals/Create');
-    }
-
-    // 3. Recebe os dados do React e salva no banco
+    /**
+     * Salva o novo animal vindo do Modal.
+     */
     public function store(Request $request)
     {
-        // Valida se os dados que vieram do React estão corretos
+        // 1. Validação rigorosa (seguindo a sua Migration)
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'species' => 'required|in:dog,cat',
-            'gender' => 'required|in:male,female',
-            'size' => 'required|in:small,medium,large',
-            'arrival_date' => 'required|date',
-            'estimated_birth_date' => 'nullable|date',
-            'is_neutered' => 'required|boolean',
-            'is_vaccinated' => 'required|boolean',
-            'status' => 'required|in:available,foster_care,adopted',
-            'description' => 'nullable|string',
+            'name'                  => 'required|string|max:255',
+            'species'               => 'required|in:dog,cat,other',
+            'gender'                => 'required|in:male,female',
+            'size'                  => 'required|in:small,medium,large',
+            'arrival_date'          => 'required|date',
+            'estimated_birth_date'  => 'nullable|date',
+            'weight'                => 'nullable|numeric|min:0',
+            'is_neutered'           => 'required|boolean',
+            'is_vaccinated'         => 'required|boolean',
+            'is_dewormed'           => 'required|boolean',
+            'description'           => 'nullable|string',
+            'status'                => 'required|in:available,adopted,deceased,foster_care,under_treatment',
+            // Validação da foto: max 2MB
+            'photo'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        // A mágica: Salva no banco. O 'ong_id' é injetado sozinho pela sua Trait!
+        // 2. Lógica de Upload com Isolamento de Tenant (ONG)
+        if ($request->hasFile('photo')) {
+            // Pegamos a ONG do usuário logado
+            $ongId = auth()->user()->ong_id;
+            // Criamos uma pasta física única para esta ONG: storage/app/public/tenants/{id}/animals
+            // Isso impede que uma ONG acesse arquivos de outra no servidor
+            $path = $request->file('photo')->storePublicly("tenants/{$ongId}/animals", 'public');
+
+            // Salvamos o CAMINHO no banco de dados (coluna photo_path)
+            $validated['photo_path'] = $path;
+        }
+
+        // 3. Criação do Registro
+        // O 'ong_id' e o 'id' (UUID) serão injetados automaticamente pela sua Trait e pelo Model
         Animal::create($validated);
 
-        // Devolve o usuário para a lista de animais
-        return redirect()->route('animals.index');
+        // 4. Resposta para o Inertia (Redireciona de volta para a lista com os dados atualizados)
+        return redirect()->route('animals.index')->with('success', 'Animal cadastrado com sucesso!');
+
+        
+    }
+
+    /**
+     * Atualiza o cadastro do animal (Update)
+     */
+    public function update(Request $request, Animal $animal)
+    {
+        // 1. Validação (A foto é nullable pois o usuário pode atualizar só o nome e não trocar a foto)
+        $validated = $request->validate([
+            'name'                  => 'required|string|max:255',
+            'species'               => 'required|in:dog,cat,other',
+            'gender'                => 'required|in:male,female',
+            'size'                  => 'required|in:small,medium,large',
+            'arrival_date'          => 'required|date',
+            'estimated_birth_date'  => 'nullable|date',
+            'weight'                => 'nullable|numeric|min:0',
+            'is_neutered'           => 'required|boolean',
+            'is_vaccinated'         => 'required|boolean',
+            'is_dewormed'           => 'required|boolean',
+            'description'           => 'nullable|string',
+            'status'                => 'required|in:available,adopted,deceased,foster_care,under_treatment',
+            'photo'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        // 2. Substituição de Arquivo Seguro (Storage Management)
+        if ($request->hasFile('photo')) {
+            // Se já existia uma foto, deletamos do disco para economizar storage e custo na AWS/Servidor
+            if ($animal->photo_path) {
+                Storage::disk('public')->delete($animal->photo_path);
+            }
+
+            // Salva a nova foto na mesma estrutura isolada do tenant
+            $path = $request->file('photo')->storePublicly("tenants/{$animal->ong_id}/animals", 'public');
+            $validated['photo_path'] = $path;
+        }
+
+        // 3. Atualiza os dados
+        $animal->update($validated);
+
+        return redirect()->back()->with('success', 'Animal atualizado com sucesso!');
+    }
+
+    /**
+     * Exclui o animal (Soft Delete)
+     */
+    public function destroy(Animal $animal)
+    {
+        // Graças à trait SoftDeletes no Model, isso não dá um DROP na linha, 
+        // apenas preenche a coluna 'deleted_at'. Os dados ficam seguros.
+        $animal->delete();
+
+        return redirect()->back()->with('success', 'Animal removido com sucesso!');
     }
 }
