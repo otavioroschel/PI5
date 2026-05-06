@@ -3,20 +3,18 @@
 namespace App\Models;
 
 use App\Models\Traits\BelongsToOng;
-use Illuminate\Database\Eloquent\Concerns\HasUuids; // 1. Import do UUID nativo
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Casts\Attribute; // 2. Import do Accessor moderno
-use Illuminate\Support\Facades\Storage; // 3. Import do Storage
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class Animal extends Model
 {
-    // Substituímos a configuração manual do UUID pela Trait HasUuids nativa do Laravel
     use HasFactory, SoftDeletes, BelongsToOng, HasUuids;
 
-    // 2. Campos que podem ser preenchidos em massa
     protected $fillable = [
         'ong_id',
         'name',
@@ -35,7 +33,6 @@ class Animal extends Model
         'foster_home_id'
     ];
 
-    // 3. Conversão automática de tipos (Casts)
     protected $casts = [
         'is_neutered' => 'boolean',
         'is_vaccinated' => 'boolean',
@@ -45,13 +42,23 @@ class Animal extends Model
         'weight' => 'decimal:2',
     ];
 
-    // 4. Atributos Dinâmicos (Accessors) que serão injetados no JSON para o React
-    // Adicionamos o 'photo_url' aqui!
     protected $appends = ['age_display', 'photo_url'];
+
+    // ── SCOPES DE NEGÓCIO ────────────────────────────────────────────────────
+
+    /**
+     * Scope: Filtra animais que compõem a "Vitrine Ativa" da ONG.
+     * Exclui automaticamente os animais já adotados das listagens principais.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', '!=', 'adopted');
+    }
+
+    // ── ACCESSORS (Atributos Dinâmicos para o BFF/React) ─────────────────────
 
     /**
      * Gera a URL pública da foto usando o disco 'public'.
-     * O React lerá isso como 'animal.photo_url'
      */
     protected function photoUrl(): Attribute
     {
@@ -61,26 +68,29 @@ class Animal extends Model
     }
 
     /**
-     * Calcula a idade formatada.
-     * O React lerá isso como 'animal.age_display'
+     * Calcula a idade formatada utilizando a sintaxe moderna do Laravel 11.
      */
-    public function getAgeDisplayAttribute()
+    protected function ageDisplay(): Attribute
     {
-        if (!$this->estimated_birth_date) {
-            return 'Idade desconhecida';
-        }
+        return Attribute::make(
+            get: function () {
+                if (!$this->estimated_birth_date) {
+                    return 'Idade desconhecida';
+                }
 
-        $now = Carbon::now();
-        $diff = $this->estimated_birth_date->diff($now);
+                $now = Carbon::now();
+                $diff = $this->estimated_birth_date->diff($now);
 
-        if ($diff->y > 0) {
-            return $diff->y . ($diff->y == 1 ? ' ano' : ' anos');
-        }
+                if ($diff->y > 0) {
+                    return $diff->y . ($diff->y == 1 ? ' ano' : ' anos');
+                }
 
-        if ($diff->m > 0) {
-            return $diff->m . ($diff->m == 1 ? ' mês' : ' meses');
-        }
+                if ($diff->m > 0) {
+                    return $diff->m . ($diff->m == 1 ? ' mês' : ' meses');
+                }
 
-        return $diff->d . ($diff->d == 1 ? ' dia' : ' dias');
+                return $diff->d . ($diff->d == 1 ? ' dia' : ' dias');
+            }
+        );
     }
 }

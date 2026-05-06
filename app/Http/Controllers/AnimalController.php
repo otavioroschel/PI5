@@ -9,15 +9,28 @@ use Inertia\Inertia;
 
 class AnimalController extends Controller
 {
-    public function index()
-    {
-        // O Global Scope (Trait BelongsToOng) filtra automaticamente por ONG
-        $animals = Animal::all();
+   public function index()
+{
+    // 1. OTIMIZAÇÃO E REGRA DE NEGÓCIO (SaaS Escalável):
+    // active(): Aplica o Local Scope (onde status != 'adopted') que criamos no Model.
+    // latest(): Ordena pelos mais recentes.
+    // paginate(15): Blinda a memória RAM do servidor limitando a 15 instâncias por vez.
+    $animals = Animal::active()
+        ->latest()
+        ->paginate(15)
+        ->withQueryString(); // Mantém a URL sincronizada caso use filtros/buscas no futuro
 
-        return Inertia::render('Animals/Index', [
-            'animals' => $animals
-        ]);
-    }
+    // 2. INJEÇÃO DE CONTEXTO (BFF Seguro):
+    // Mantido exatamente como você fez: restritivo e focado em performance.
+    $adopters = \App\Models\Adopter::select('id', 'name', 'cpf')
+        ->orderBy('name')
+        ->get();
+
+    return Inertia::render('Animals/Index', [
+        'animals' => $animals,
+        'adopters' => $adopters
+    ]);
+}
 
     /**
      * Salva o novo animal vindo do Modal.

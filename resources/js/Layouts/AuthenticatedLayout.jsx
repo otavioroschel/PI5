@@ -57,50 +57,80 @@ function NavLink({ href, icon, label, active }) {
 // ── Layout Principal ──────────────────────────────────────────────────────────
 export default function AuthenticatedLayout({ user, header, children }) {
     const { url } = usePage();
+    
+    // 1. Novos estados de controle dos Dropdowns
     const [insumosOpen, setInsumosOpen] = useState(url.startsWith('/insumos'));
+    // O menu de adoções deve abrir se a URL for /adoptions OU /adopters
+    const [adocoesOpen, setAdocoesOpen] = useState(url.startsWith('/adoptions') || url.startsWith('/adopters'));
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Fecha o menu mobile automaticamente sempre que a URL mudar
     useEffect(() => {
         setMobileMenuOpen(false);
     }, [url]);
 
     const isActive = (path) => path === '/' ? url === '/' : url.startsWith(path);
 
-    // Padrão DRY: Renderizador da lista de links (Usado no Desktop e no Mobile)
     const renderNavItems = () => (
         <>
             <NavLink href="/animals" icon={<IconAnimais />} label="Animais" active={isActive('/animals')} />
-            <NavLink href="/adoptions" icon={<IconAdocoes />} label="Adoções" active={isActive('/adoptions')} />
             <NavLink href="/foster-homes" icon={<IconLares />} label="Lares temporários" active={isActive('/foster-homes')} />
 
-            {/* Insumos com submenu */}
+            {/* ── Dropdown: Módulo de Adoções ── */}
             <div>
                 <button
-                    onClick={() => setInsumosOpen((o) => !o)}
+                    onClick={() => setAdocoesOpen((o) => !o)}
                     className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                        isActive('/insumos')
+                        isActive('/adoptions') || isActive('/adopters')
                             ? 'bg-gray-900 text-white'
                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                 >
                     <span className="flex items-center gap-3">
-                        <span className={isActive('/insumos') ? 'text-white' : 'text-gray-400'}>
-                            <IconInsumos />
+                        <span className={isActive('/adoptions') || isActive('/adopters') ? 'text-white' : 'text-gray-400'}>
+                            <IconAdocoes />
                         </span>
-                        Insumos
+                        Adoções
                     </span>
-                    <IconChevron open={insumosOpen} />
+                    <IconChevron open={adocoesOpen} />
                 </button>
 
-                {insumosOpen && (
+                {adocoesOpen && (
                     <div className="ml-8 mt-1 space-y-0.5">
-                        <NavLink href="/insumos/estoque" icon={null} label="Estoque" active={isActive('/insumos/estoque')} />
-                        <NavLink href="/insumos/pedidos" icon={null} label="Pedidos" active={isActive('/insumos/pedidos')} />
+                        <NavLink href="/adoptions" icon={null} label="Animais Adotados" active={isActive('/adoptions')} />
+                        <NavLink href="/adopters" icon={null} label="Adotantes" active={isActive('/adopters')} />
                     </div>
                 )}
             </div>
 
+           {/* ── Dropdown: Módulo de Insumos ── */}
+<div>
+    <button
+        onClick={() => setInsumosOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+            isActive('/insumos')
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+    >
+        <span className="flex items-center gap-3">
+            <span className={isActive('/insumos') ? 'text-white' : 'text-gray-400'}>
+                <IconInsumos />
+            </span>
+            Insumos
+        </span>
+        <IconChevron open={insumosOpen} />
+    </button>
+
+    {insumosOpen && (
+        <div className="ml-8 mt-1 space-y-0.5">
+            {/* O helper isActive garante que APENAS a página acessada no momento fique com fundo escuro */}
+            <NavLink href="/inventory/food" icon={null} label="Ração" active={isActive('/inventory/food')} />
+            <NavLink href="/inventory/medications" icon={null} label="Medicamentos" active={isActive('/inventory/medications')} />
+            <NavLink href="/inventory/hygiene" icon={null} label="Higiene" active={isActive('/inventory/hygiene')} />
+            <NavLink href="/inventory/cleaning" icon={null} label="Limpeza" active={isActive('/inventory/cleaning')} />
+        </div>
+    )}
+</div>
             <NavLink href="/volunteers" icon={<IconVoluntarios />} label="Voluntários" active={isActive('/volunteers')} />
         </>
     );
