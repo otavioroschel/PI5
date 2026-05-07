@@ -44,7 +44,8 @@ return new class extends Migration
                 'adopted',        // adotado
                 'deceased',       // óbito
                 'foster_care',    // lar temporário
-                'under_treatment' // em tratamento
+                'under_treatment',
+                'returned' // em tratamento
             ])->default('available');
 
             // 8. Chave Estrangeira Opcional para Lar Temporário (Nullable)

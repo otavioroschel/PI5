@@ -12,15 +12,16 @@ class AdopterController extends Controller
 {
     // Retorna a página (Inertia) com os adotantes da ONG
     public function index()
-    {
-        // O Global Scope (BelongsToOng) injetado no Model garante que 
-        // apenas os adotantes desta ONG sejam retornados.
-        $adopters = Adopter::with('address')->latest()->get();
+{
+    // Buscamos os adotantes com endereço E com o histórico de adoções + animais
+    $adopters = Adopter::with(['address', 'adoptions.animal'])
+        ->orderBy('name', 'asc')
+        ->paginate(15);
 
-        return Inertia::render('Adopters/Index', [
-            'adopters' => $adopters
-        ]);
-    }
+    return inertia('Adopters/Index', [
+        'adopters' => $adopters
+    ]);
+}
 
     // Salva o Adotante e o Endereço de forma atômica
     public function store(AdopterRequest $request)

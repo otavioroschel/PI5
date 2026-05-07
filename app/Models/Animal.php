@@ -67,6 +67,8 @@ class Animal extends Model
         );
     }
 
+    
+
     /**
      * Calcula a idade formatada utilizando a sintaxe moderna do Laravel 11.
      */

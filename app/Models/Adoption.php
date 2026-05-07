@@ -17,6 +17,8 @@ class Adoption extends Model
         'animal_id',
         'adopter_id',
         'adoption_date',
+        'returned_at',    // 🛡️ LIBERADO PARA GRAVAÇÃO
+        'return_reason'   // 🛡️ LIBERADO PARA GRAVAÇÃO
     ];
 
     protected $casts = [

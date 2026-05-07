@@ -5,9 +5,11 @@ namespace Database\Seeders;
 use App\Models\Ong;
 use App\Models\User;
 use App\Models\Animal;
+use App\Models\Adopter; // 🛡️ Importação do Adotante
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Faker\Factory as Faker; // 🛡️ Importação do Faker para gerar dados falsos realistas
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,6 +18,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Instancia o gerador de dados falsos em Português
+        $faker = Faker::create('pt_BR');
+
         // 1. Super Admin (O "Dono" do SaaS)
         User::withoutEvents(function () {
             User::create([
@@ -59,6 +64,28 @@ class DatabaseSeeder extends Seeder
             'status' => 'available',
             'description' => 'Um cão muito brincalhão e protetor.'
         ]);
+
+        // 🐾 2 Adotantes de Teste para a ONG 1
+        for ($i = 0; $i < 2; $i++) {
+            $adopter = Adopter::create([
+                'ong_id' => $ong1->id,
+                'name'   => $faker->name,
+                'cpf'    => $faker->cpf(false), 
+                'phone'  => $faker->cellphoneNumber,
+                'email'  => $faker->unique()->safeEmail,
+            ]);
+
+            // Cria o Endereço vinculado a ele
+            $adopter->address()->create([
+                'ong_id'       => $ong1->id,
+                'zip_code'     => $faker->postcode,
+                'street'       => $faker->streetName,
+                'number'       => $faker->buildingNumber,
+                'neighborhood' => 'Bairro ' . $faker->word,
+                'city'         => $faker->city,
+                'state'        => $faker->stateAbbr, 
+            ]);
+        }
 
         // 3. ONG 2 - Gato Mestre
         $ong2 = Ong::create([

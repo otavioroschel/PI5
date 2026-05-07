@@ -11,25 +11,36 @@ use Illuminate\Validation\Rule;
 class AdoptionController extends Controller
 {
     /**
-     * Exibe a listagem do Histórico de Adoções (A ROTA QUE ESTAVA FALTANDO)
+     * Exibe a listagem do Histórico de Adoções
      */
- public function index(Request $request)
-{
-    // O Eloquent fará 3 queries otimizadas em vez do problema N+1:
-    // 1. Busca as adoções
-    // 2. Busca os animais e adotantes vinculados
-    // 3. Busca os endereços vinculados aos adotantes
-    $adoptions = Adoption::with([
-        'animal', 
-        'adopter.address' // 🛡️ A mágica acontece aqui (Relação Aninhada)
-    ])
-    ->orderBy('adoption_date', 'desc')
-    ->paginate(15);
+  public function index(Request $request)
+    {
+        $query = Adoption::with([
+            'animal', 
+            'adopter.address',
+            'adopter.adoptions.animal' 
+        ])->orderBy('adoption_date', 'desc');
 
-    return inertia('Adoptions/Index', [
-        'adoptions' => $adoptions
-    ]);
-}
+        // 🛡️ LÓGICA DE PESQUISA
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('adopter', function ($q) use ($search) {
+                $q->where('cpf', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%");
+            })->orWhereHas('animal', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        // withQueryString garante que o termo de busca continue na URL ao trocar de página
+        $adoptions = $query->paginate(15)->withQueryString();
+
+        return inertia('Adoptions/Index', [
+            'adoptions' => $adoptions,
+            'filters' => $request->only('search') // Devolvemos o filtro para o React
+        ]);
+    }
+
     /**
      * Salva uma nova adoção de forma atômica
      */
@@ -37,7 +48,6 @@ class AdoptionController extends Controller
     {
         $ongId = $request->user()->ong_id;
 
-        // Validação Estrita (Garantindo que IDs pertencem à ONG correta)
         $validated = $request->validate([
             'animal_id' => [
                 'required', 'uuid', 
@@ -52,15 +62,12 @@ class AdoptionController extends Controller
 
         try {
             DB::transaction(function () use ($validated, $ongId) {
-                // 1. Bloqueia o registro do animal para leitura/escrita concorrente
                 $animal = Animal::where('id', $validated['animal_id'])->lockForUpdate()->first();
 
-                // 2. Proteção de Negócio: Impede dupla adoção
                 if ($animal->status !== 'available') {
                     throw new \Exception('Este animal não está disponível para adoção.');
                 }
 
-                // 3. Registra o histórico
                 Adoption::create([
                     'ong_id'        => $ongId,
                     'animal_id'     => $validated['animal_id'],
@@ -68,7 +75,6 @@ class AdoptionController extends Controller
                     'adoption_date' => $validated['adoption_date'],
                 ]);
 
-                // 4. Atualiza a vitrine
                 $animal->update(['status' => 'adopted']);
             });
 
@@ -77,5 +83,33 @@ class AdoptionController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
+    } // <--- AQUI FECHA O STORE
+
+    /**
+     * Registra a devolução de um animal
+     */
+    public function returnAnimal(Request $request, Adoption $adoption)
+    {
+        $request->validate([
+            'return_reason' => 'required|string|min:10',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $adoption) {
+                $adoption->update([
+                    'returned_at' => now(),
+                    'return_reason' => $request->return_reason,
+                ]);
+
+                $adoption->animal->update([
+                    'status' => 'returned'
+                ]);
+            });
+
+            return redirect()->back()->with('success', 'Devolução registrada.');
+        } catch (\Exception $e) {
+            // 🚨 TROQUE O REDIRECT PELO DD() AQUI:
+            dd($e->getMessage()); 
+        }
     }
-}
+} // <--- AQUI FECHA A CLASSE
