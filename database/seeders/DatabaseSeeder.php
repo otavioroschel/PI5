@@ -120,5 +120,8 @@ class DatabaseSeeder extends Seeder
             'status' => 'foster_care',
             'description' => 'Uma gatinha dócil que adora colo.'
         ]);
+
+        // Depois de criar as ONGs e os Animais...
+        \App\Models\AdoptionRequest::factory(30)->create();
     }
 }

@@ -20,7 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->statefulApi();
 
         $middleware->alias([
+            // O seu middleware interno (Painel da ONG)
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
+            
+            // O NOVO middleware público (Vitrine)
+            'resolve.tenant' => \App\Http\Middleware\ResolveTenantBySlug::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
