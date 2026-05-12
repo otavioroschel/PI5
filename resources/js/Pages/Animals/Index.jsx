@@ -19,6 +19,8 @@ const translate = {
     },
 };
 
+
+
 const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—';
 
@@ -63,7 +65,12 @@ const EditIcon = () => ( <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24
 const TrashIcon = () => ( <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>);
 const PlusIcon = () => ( <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" d="M12 4v16m8-8H4" /></svg>);
 const PawIcon = () => ( <svg className="w-6 h-6 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C10.5 2 9.2 3.2 9.2 4.7C9.2 6.2 10.5 7.5 12 7.5C13.5 7.5 14.8 6.2 14.8 4.7C14.8 3.2 13.5 2 12 2ZM6.5 6C5.1 6 4 7.1 4 8.5C4 9.9 5.1 11 6.5 11C7.9 11 9 9.9 9 8.5C9 7.1 7.9 6 6.5 6ZM17.5 6C16.1 6 15 7.1 15 8.5C15 9.9 16.1 11 17.5 11C18.9 11 20 9.9 20 8.5C20 7.1 18.9 6 17.5 6ZM12 10C9.2 10 7 12.2 7 15C7 18 9 22 12 22C15 22 17 18 17 15C17 12.2 14.8 10 12 10Z"/></svg>);
-
+const ViewIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+);
 const GenderIcon = ({ gender }) =>
     gender === 'female' ? (
         <svg className="w-4 h-4 text-pink-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="9" r="5" /><path strokeLinecap="round" d="M12 14v6M9 17h6" /></svg>
@@ -72,12 +79,13 @@ const GenderIcon = ({ gender }) =>
     );
 
 // ── Componente principal ───────────────────────────────────────────────────────
-export default function Index({ auth, animals = [], adopters = [] }) {
+export default function Index({ auth, animals = [], adopters = [], temporaryHomes = [] }) {
     const [search, setSearch] = useState('');
     const [sort, setSort] = useState('newest');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingAnimal, setEditingAnimal] = useState(null);
     const [adoptionModal, setAdoptionModal] = useState({ isOpen: false, animal: null });
+    const [locationModal, setLocationModal] = useState({ isOpen: false, home: null });
 
     // Configuração do Formulário de Adoção
     const adoptionFields = useMemo(() => [
@@ -192,22 +200,53 @@ export default function Index({ auth, animals = [], adopters = [] }) {
                                             <td className="px-4 py-3"><BoolBadge value={animal.is_dewormed} /></td>
                                             <td className="px-4 py-3"><BoolBadge value={animal.is_neutered} /></td>
                                             <td className="px-4 py-3"><BoolBadge value={animal.is_vaccinated} /></td>
-                                            <td className="px-4 py-3"><StatusBadge status={animal.status} /></td>
                                             <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    {animal.status === 'available' && (
-                                                        <button 
-                                                            onClick={() => setAdoptionModal({ isOpen: true, animal: animal })}
-                                                            className="p-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-lg transition-colors"
-                                                            title="Registrar Adoção"
-                                                        >
-                                                            <AdoptIcon />
-                                                        </button>
-                                                    )}
-                                                    <button onClick={() => setEditingAnimal(animal)} className="p-2 bg-gray-100 text-gray-600 hover:bg-indigo-100 rounded-lg"><EditIcon /></button>
-                                                    <Link href={`/animals/${animal.id}`} method="delete" as="button" className="p-2 bg-gray-100 text-gray-600 hover:bg-red-100 rounded-lg" onClick={(e) => !confirm(`Excluir ${animal.name}?`) && e.preventDefault()}><TrashIcon /></Link>
-                                                </div>
-                                            </td>
+    {animal.status === 'foster_care' ? (
+        <button 
+            onClick={() => setLocationModal({ isOpen: true, home: animal.temporary_home })}
+            className="group flex items-center gap-1"
+        >
+            <StatusBadge status={animal.status} />
+            <span className="text-[10px] text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                (ver local)
+            </span>
+        </button>
+    ) : (
+        <StatusBadge status={animal.status} />
+    )}
+</td><td className="px-4 py-3">
+    <div className="flex items-center gap-2">
+        {/* Botão de Adotar (se estiver disponível) */}
+        {animal.status === 'available' && (
+            <button 
+                onClick={() => setAdoptionModal({ isOpen: true, animal: animal })}
+                className="p-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-lg transition-colors"
+                title="Registrar Adoção"
+            >
+                <AdoptIcon />
+            </button>
+        )}
+        
+        {/* 👁️ NOVO: Botão de Ver Dossiê (Olho) */}
+        <Link 
+            href={`/animals/${animal.id}`} 
+            className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+            title="Ver Dossiê Completo"
+        >
+            <ViewIcon />
+        </Link>
+
+        {/* Botão de Editar */}
+        <button onClick={() => setEditingAnimal(animal)} className="p-2 bg-gray-100 text-gray-600 hover:bg-indigo-100 rounded-lg" title="Editar">
+            <EditIcon />
+        </button>
+        
+        {/* Botão de Excluir */}
+        <Link href={`/animals/${animal.id}`} method="delete" as="button" className="p-2 bg-gray-100 text-gray-600 hover:bg-red-100 rounded-lg" onClick={(e) => !confirm(`Excluir ${animal.name}?`) && e.preventDefault()} title="Excluir">
+            <TrashIcon />
+        </Link>
+    </div>
+</td>
                                         </tr>
                                     ))
                                 )}
@@ -228,12 +267,20 @@ export default function Index({ auth, animals = [], adopters = [] }) {
                                         <StatusBadge status={animal.status} />
                                     </div>
                                 </div>
-                                <div className="flex justify-end gap-2 pt-3 border-t">
-                                     {animal.status === 'available' && (
-                                        <button onClick={() => setAdoptionModal({ isOpen: true, animal })} className="p-2 text-pink-600 bg-pink-50 rounded-lg"><AdoptIcon /></button>
-                                     )}
-                                     <button onClick={() => setEditingAnimal(animal)} className="p-2 text-gray-600 bg-gray-100 rounded-lg"><EditIcon /></button>
-                                </div>
+                               <div className="flex justify-end gap-2 pt-3 border-t">
+    {/* Botão de Adotar (se disponível) */}
+    {animal.status === 'available' && (
+        <button onClick={() => setAdoptionModal({ isOpen: true, animal })} className="p-2 text-pink-600 bg-pink-50 rounded-lg"><AdoptIcon /></button>
+    )}
+    
+    {/* 👁️ NOVO: Botão de Ver Dossiê no Mobile */}
+    <Link href={`/animals/${animal.id}`} className="p-2 text-blue-600 bg-blue-50 rounded-lg">
+        <ViewIcon />
+    </Link>
+
+    {/* Botão de Editar */}
+    <button onClick={() => setEditingAnimal(animal)} className="p-2 text-gray-600 bg-gray-100 rounded-lg"><EditIcon /></button>
+</div>
                             </div>
                         ))}
                     </div>
@@ -242,10 +289,49 @@ export default function Index({ auth, animals = [], adopters = [] }) {
 
             {/* MODALS */}
             <CreateAnimalModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-            <EditAnimalModal isOpen={!!editingAnimal} onClose={() => setEditingAnimal(null)} animal={editingAnimal} />
-            <BaseModal isOpen={adoptionModal.isOpen} onClose={() => setAdoptionModal({ isOpen: false, animal: null })} title={adoptionModal.animal ? `Registrar Adoção: ${adoptionModal.animal.name}` : ''}>
-                <DynamicForm fields={adoptionFields} endpoint="/adoptions" method="post" onSuccess={() => setAdoptionModal({ isOpen: false, animal: null })} />
-            </BaseModal>
+           {/* ✅ Depois: */}
+<EditAnimalModal 
+    isOpen={!!editingAnimal} 
+    onClose={() => setEditingAnimal(null)} 
+    animal={editingAnimal} 
+    temporaryHomes={temporaryHomes} 
+/>
+            <BaseModal 
+    isOpen={locationModal.isOpen} 
+    onClose={() => setLocationModal({ isOpen: false, home: null })} 
+    title="📍 Localização do Animal"
+>
+    {locationModal.home ? (
+        <div className="p-6 space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-2xl">🏠</div>
+                <div>
+                    <h3 className="font-bold text-gray-900">{locationModal.home.name}</h3>
+                    <p className="text-sm text-gray-500">{locationModal.home.phone}</p>
+                </div>
+            </div>
+            
+            <div className="space-y-2">
+                <h4 className="text-xs font-bold text-gray-400 uppercase">Endereço Completo</h4>
+                <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-indigo-900 text-sm">
+                    <p><strong>{locationModal.home.address?.street}, {locationModal.home.address?.number}</strong></p>
+                    <p>{locationModal.home.address?.neighborhood}</p>
+                    <p>{locationModal.home.address?.city} - {locationModal.home.address?.state}</p>
+                </div>
+            </div>
+
+            <a 
+                href={`https://wa.me/55${locationModal.home.phone?.replace(/\D/g, '')}`} 
+                target="_blank"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500 text-white rounded-lg font-bold hover:bg-emerald-600 transition-colors"
+            >
+                💬 Chamar no WhatsApp
+            </a>
+        </div>
+    ) : (
+        <p className="p-6 text-center text-gray-500">Dados de localização não encontrados.</p>
+    )}
+</BaseModal>
         </AuthenticatedLayout>
     );
 }

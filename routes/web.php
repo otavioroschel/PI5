@@ -8,6 +8,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Admin\AdoptionLeadController;
 use App\Http\Controllers\Vitrine\VitrineController;
 use App\Http\Controllers\Vitrine\VitrineAdoptionController;
+use App\Http\Controllers\TemporaryHomeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -36,15 +37,19 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
 Route::middleware(['auth', 'tenant'])->group(function () {
     
     // 🐾 Módulo 1: Prontuários de Animais
+    // 🐾 Módulo 1: Prontuários de Animais
     Route::prefix('animals')->name('animals.')->group(function () {
         Route::get('/', [AnimalController::class, 'index'])->name('index');
+        
+        // 👁️ ADICIONE ESTA LINHA AQUI (A rota do Dossiê!):
+        Route::get('/{animal}', [AnimalController::class, 'show'])->name('show');
+        
         Route::middleware('throttle:30,1')->group(function () {
             Route::post('/', [AnimalController::class, 'store'])->name('store');
             Route::put('/{animal}', [AnimalController::class, 'update'])->name('update');
             Route::delete('/{animal}', [AnimalController::class, 'destroy'])->name('destroy');
         });
     });
-
     // 👤 Módulo 2: Adotantes
     Route::prefix('adopters')->name('adopters.')->group(function () {
         Route::get('/', [AdopterController::class, 'index'])->name('index');
@@ -75,6 +80,12 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     // 📩 Módulo 5: Solicitações de Adoção (Leads da Vitrine para a ONG gerenciar)
     Route::get('/painel/solicitacoes', [AdoptionLeadController::class, 'index'])->name('admin.leads.index');
     Route::post('/painel/solicitacoes/{lead}/aprovar', [AdoptionLeadController::class, 'approve'])->name('admin.leads.approve');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    // ... suas outras rotas
+
+    Route::resource('temporary-homes', TemporaryHomeController::class)->except(['create', 'show', 'edit']);
 });
 
 

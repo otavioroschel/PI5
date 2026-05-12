@@ -21,18 +21,18 @@ class Animal extends Model
         'species',
         'gender',
         'size',
-        'arrival_date',
-        'estimated_birth_date',
         'weight',
-        'is_neutered',
+        'estimated_birth_date',
+        'arrival_date',
+        'description',
+        'is_castrated', // ou is_neutered, dependendo de como você nomeou
         'is_vaccinated',
         'is_dewormed',
-        'photo_path',
-        'description',
         'status',
-        'foster_home_id'
+        'photo_path',
+        'temporary_home_id', // 👈 ADICIONE ESTA LINHA AQUI!
     ];
-
+    
     protected $casts = [
         'is_neutered' => 'boolean',
         'is_vaccinated' => 'boolean',
@@ -43,6 +43,11 @@ class Animal extends Model
     ];
 
     protected $appends = ['age_display', 'photo_url'];
+
+            public function temporaryHome()
+{
+    return $this->belongsTo(TemporaryHome::class);
+}
 
     // ── SCOPES DE NEGÓCIO ────────────────────────────────────────────────────
 

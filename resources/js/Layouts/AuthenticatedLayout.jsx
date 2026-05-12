@@ -73,7 +73,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const renderNavItems = () => (
         <>
             <NavLink href="/animals" icon={<IconAnimais />} label="Animais" active={isActive('/animals')} />
-            <NavLink href="/foster-homes" icon={<IconLares />} label="Lares temporários" active={isActive('/foster-homes')} />
+            <NavLink href="/temporary-homes" icon={<IconLares />} label="Lares temporários" active={isActive('/temporary-homes')} />
 
             {/* ── Dropdown: Módulo de Adoções ── */}
             <div>

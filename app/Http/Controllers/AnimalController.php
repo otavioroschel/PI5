@@ -9,26 +9,34 @@ use Inertia\Inertia;
 
 class AnimalController extends Controller
 {
-   public function index()
+public function index()
 {
-    // 1. OTIMIZAÇÃO E REGRA DE NEGÓCIO (SaaS Escalável):
-    // active(): Aplica o Local Scope (onde status != 'adopted') que criamos no Model.
-    // latest(): Ordena pelos mais recentes.
-    // paginate(15): Blinda a memória RAM do servidor limitando a 15 instâncias por vez.
+    // 1. OTIMIZAÇÃO E CARREGAMENTO DE RELAÇÕES (Eager Loading):
+    // active(): Filtra os animais (Local Scope).
+    // with(['temporaryHome.address']): 🛡️ ESSA É A CHAVE! 
+    // Carrega o lar temporário e, dentro dele, o endereço polimórfico.
     $animals = Animal::active()
+        ->with(['temporaryHome.address']) 
         ->latest()
         ->paginate(15)
-        ->withQueryString(); // Mantém a URL sincronizada caso use filtros/buscas no futuro
+        ->withQueryString();
 
-    // 2. INJEÇÃO DE CONTEXTO (BFF Seguro):
-    // Mantido exatamente como você fez: restritivo e focado em performance.
+    // 2. INJEÇÃO DE CONTEXTO PARA OS MODAIS (BFF Seguro):
+    // Adotantes para o modal de registro de adoção
     $adopters = \App\Models\Adopter::select('id', 'name', 'cpf')
         ->orderBy('name')
         ->get();
 
+    // Lares Temporários para o modal de Edição do Animal
+    $temporaryHomes = \App\Models\TemporaryHome::select('id', 'name', 'max_capacity')
+        ->orderBy('name')
+        ->get();
+
+    // 3. ENVIO ÚNICO PARA O FRONT-END:
     return Inertia::render('Animals/Index', [
         'animals' => $animals,
-        'adopters' => $adopters
+        'adopters' => $adopters,
+        'temporaryHomes' => $temporaryHomes
     ]);
 }
 
@@ -80,7 +88,7 @@ class AnimalController extends Controller
     /**
      * Atualiza o cadastro do animal (Update)
      */
-    public function update(Request $request, Animal $animal)
+   public function update(Request $request, Animal $animal)
     {
         // 1. Validação (A foto é nullable pois o usuário pode atualizar só o nome e não trocar a foto)
         $validated = $request->validate([
@@ -97,6 +105,9 @@ class AnimalController extends Controller
             'description'           => 'nullable|string',
             'status'                => 'required|in:available,adopted,deceased,foster_care,under_treatment',
             'photo'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            
+            // 🛡️ A LIBERAÇÃO DA CATRACA ESTÁ AQUI:
+            'temporary_home_id'     => 'nullable|exists:temporary_homes,id',
         ]);
 
         // 2. Substituição de Arquivo Seguro (Storage Management)
@@ -111,10 +122,34 @@ class AnimalController extends Controller
             $validated['photo_path'] = $path;
         }
 
+        // Se o status NÃO for lar temporário, garantimos que o vínculo seja quebrado
+        if ($validated['status'] !== 'foster_care') {
+            $validated['temporary_home_id'] = null;
+        }
+
         // 3. Atualiza os dados
         $animal->update($validated);
 
         return redirect()->back()->with('success', 'Animal atualizado com sucesso!');
+    }
+
+    public function show(Animal $animal)
+    {
+        // 🛡️ Segurança Multi-tenant: Impede que uma ONG acesse o animal de outra
+        if ($animal->ong_id !== auth()->user()->ong_id) {
+            abort(403, 'Acesso não autorizado a este dossiê.');
+        }
+
+        // 📦 Eager Loading: Carrega tudo que precisamos para a Linha do Tempo
+        // Obs: Se você tiver um relacionamento de adoções (ex: 'adoptions.adopter'), 
+        // você pode adicionar ele nesse array depois!
+        $animal->load([
+            'temporaryHome.address'
+        ]);
+
+        return Inertia::render('Animals/Show', [
+            'animal' => $animal
+        ]);
     }
 
     /**

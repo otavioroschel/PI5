@@ -9,7 +9,8 @@ const CloseIcon = () => (
     <svg className="w-6 h-6 text-gray-500 hover:text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
 );
 
-export default function EditAnimalModal({ isOpen, onClose, animal }) {
+// 🛡️ 1. Recebemos a lista de temporaryHomes aqui
+export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHomes = [] }) {
     const fileInputRef = useRef(null);
     const [preview, setPreview] = useState(null);
 
@@ -28,6 +29,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal }) {
         photo: null,
         description: '',
         status: 'available',
+        temporary_home_id: '', // 🛡️ 2. Novo campo no state
     });
 
     useEffect(() => {
@@ -47,6 +49,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal }) {
                 photo: null, 
                 description: animal.description || '',
                 status: animal.status || 'available',
+                temporary_home_id: animal.temporary_home_id || '', // 🛡️ 2. Carrega do banco se tiver
             });
             setPreview(animal.photo_url || null);
         }
@@ -75,7 +78,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal }) {
         onClose();
     };
 
-  const submit = (e) => {
+    const submit = (e) => {
         e.preventDefault();
         post(`/animals/${animal.id}`, {
             preserveScroll: true,
@@ -167,7 +170,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal }) {
                             <textarea rows="3" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black resize-none" value={data.description} onChange={e => setData('description', e.target.value)}></textarea>
                         </div>
 
-                        <div>
+                        <div className="pb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select value={data.status} onChange={e => setData('status', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black bg-white">
                                 <option value="available">Disponível</option>
@@ -176,6 +179,30 @@ export default function EditAnimalModal({ isOpen, onClose, animal }) {
                                 <option value="foster_care">Lar temporário</option>
                                 <option value="deceased">Óbito</option>
                             </select>
+
+                            {/* 🛡️ 3. A MÁGICA CONDICIONAL */}
+                            {data.status === 'foster_care' && (
+                                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in duration-200">
+                                    <label className="block text-sm font-bold text-blue-800 mb-1">Selecione o Lar Temporário *</label>
+                                    <select 
+                                        value={data.temporary_home_id} 
+                                        onChange={e => setData('temporary_home_id', e.target.value)}
+                                        className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 bg-white"
+                                        required={data.status === 'foster_care'}
+                                    >
+                                        <option value="">-- Escolha um Lar na lista --</option>
+                                        {temporaryHomes.map(home => (
+                                            <option key={home.id} value={home.id}>
+                                                {home.name} (Capacidade: {home.max_capacity})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.temporary_home_id} className="mt-1" />
+                                    <p className="text-xs text-blue-600 mt-2">
+                                        * O animal será oficialmente vinculado ao endereço deste lar.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                     </form>
