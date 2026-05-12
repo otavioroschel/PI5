@@ -59,7 +59,7 @@ const AdopterForm = ({ initialData, onSuccess, onCancel }) => {
 
         setLoadingCep(true);
         try {
-            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const response = await fetch(`/api/cep/${cleanCep}`);
             const result = await response.json();
 
             if (!result.erro) {

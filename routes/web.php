@@ -10,6 +10,8 @@ use App\Http\Controllers\Vitrine\VitrineController;
 use App\Http\Controllers\Vitrine\VitrineAdoptionController;
 use App\Http\Controllers\TemporaryHomeController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\VolunteerController;
 use Inertia\Inertia;
 
 // ── ROTAS DE REDIRECIONAMENTO ─────────────────────────────────────────────────
@@ -87,6 +89,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('temporary-homes', TemporaryHomeController::class)->except(['create', 'show', 'edit']);
 });
+
+// 🦸 Módulo de Voluntários
+    Route::resource('volunteers', \App\Http\Controllers\VolunteerController::class)->except(['create', 'show', 'edit']);
+
+    Route::get('/api/cep/{cep}', function ($cep) {
+    // 1. Limpa tudo que não for número
+    $cep = preg_replace('/\D/', '', $cep);
+    
+    // 2. Se não tiver 8 dígitos, rejeita
+    if (strlen($cep) !== 8) {
+        return response()->json(['erro' => 'CEP inválido'], 400);
+    }
+
+    // 3. O Laravel faz a requisição pro ViaCEP (Motor seguro)
+    $response = Http::timeout(5)->get("https://viacep.com.br/ws/{$cep}/json/");
+
+    if ($response->successful() && !isset($response['erro'])) {
+        return $response->json();
+    }
+
+    return response()->json(['erro' => 'CEP não encontrado'], 404);
+})->name('api.cep');
 
 
         require __DIR__.'/auth.php';
