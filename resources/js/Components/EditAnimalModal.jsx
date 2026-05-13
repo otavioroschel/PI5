@@ -196,6 +196,12 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                                 <option value="under_treatment">Em tratamento</option>
                                 <option value="foster_care">Lar temporário</option>
                                 <option value="deceased">Óbito</option>
+                                 {/* opção técnica invisível na prática */}
+    {data.status === 'returned' && (
+        <option value="returned" hidden>
+            Retornado
+        </option>
+    )}
                             </select>
                             <InputError message={errors.status} className="mt-1" />
 
