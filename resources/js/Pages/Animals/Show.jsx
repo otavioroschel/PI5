@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
-// ── Helpers e Traduções (Reaproveitados do Index) ─────────────────────────────
+// ── Helpers e Traduções ─────────────────────────────
 const translate = {
     species: { dog: 'Cachorro', cat: 'Gato', other: 'Outro' },
     gender:  { male: 'Macho', female: 'Fêmea' },
@@ -35,7 +35,8 @@ const CheckCircle = () => <svg className="w-6 h-6 text-emerald-500" fill="none" 
 const XCircle = () => <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 // ── COMPONENTE PRINCIPAL ──────────────────────────────────────────────────────
-export default function Show({ auth, animal }) {
+// 🚀 CORREÇÃO 1: Adicionada a prop 'back_url' aqui na desestruturação!
+export default function Show({ auth, animal, back_url }) {
     
     // Cores dinâmicas para o Status Hero
     const statusColors = {
@@ -52,9 +53,12 @@ export default function Show({ auth, animal }) {
 
             <div className="py-8 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* 🔙 Botão Voltar */}
+                {/* 🚀 CORREÇÃO 2: Botão Voltar unificado, dinâmico e no lugar correto */}
                 <div className="mb-6">
-                    <Link href="/animals" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+                    <Link 
+                        href={back_url || "/animals"} // Fallback seguro de roteamento
+                        className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                    >
                         <ArrowLeft /> Voltar para a lista
                     </Link>
                 </div>
@@ -137,7 +141,7 @@ export default function Show({ auth, animal }) {
                             {/* Descrição */}
                             <div className="mt-6">
                                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Anotações e Histórico Comportamental</h4>
-                                <div className="p-4 bg-yellow-50 rounded-xl text-sm text-yellow-900 border border-yellow-100 leading-relaxed">
+                                <div className="p-4 bg-yellow-50 rounded-xl text-sm text-yellow-900 border border-yellow-100 leading-relaxed whitespace-pre-wrap">
                                     {animal.description ? animal.description : <span className="italic opacity-70">Nenhuma anotação registrada.</span>}
                                 </div>
                             </div>
@@ -173,9 +177,6 @@ export default function Show({ auth, animal }) {
                                     <h4 className="font-bold text-gray-900">Chegada na ONG</h4>
                                     <p className="text-sm text-gray-500 mt-1">Registrado no sistema em <strong className="text-gray-700">{formatDate(animal.arrival_date)}</strong>.</p>
                                 </div>
-
-                                {/* No futuro: Você pode fazer um .map() aqui na lista de adoções e devoluções que vem do banco! */}
-
                             </div>
                         </div>
 

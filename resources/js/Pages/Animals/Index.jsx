@@ -15,10 +15,18 @@ const translate = {
         available:   'Disponível',
         foster_care: 'Lar temporário',
         adopted:     'Adotado',
-        treatment:   'Em tratamento',
+        under_treatment: 'Em tratamento',
+        returned:    'Retornado (Avaliação)', // 🚀 ADICIONE ESTA CHAVE
     },
 };
 
+const statusStyle = {
+    available:   'bg-green-100 text-green-700',
+    foster_care: 'bg-purple-100 text-purple-700',
+    adopted:     'bg-blue-100 text-blue-700',
+    under_treatment: 'bg-yellow-100 text-yellow-700',
+    returned:    'bg-orange-100 text-orange-700', // 🚀 COR DE ALERTA PARA AVALIAÇÃO
+};
 
 
 const formatDate = (d) =>
@@ -42,12 +50,7 @@ const BoolBadge = ({ value, yes = 'Sim', no = 'Não' }) => (
     </span>
 );
 
-const statusStyle = {
-    available:   'bg-green-100 text-green-700',
-    foster_care: 'bg-purple-100 text-purple-700',
-    adopted:     'bg-blue-100 text-blue-700',
-    treatment:   'bg-yellow-100 text-yellow-700',
-};
+
 
 const StatusBadge = ({ status }) => (
     <span className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyle[status] ?? 'bg-gray-100 text-gray-600'}`}>

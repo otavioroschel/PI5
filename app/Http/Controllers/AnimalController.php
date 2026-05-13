@@ -103,7 +103,7 @@ public function index()
             'is_vaccinated'         => 'required|boolean',
             'is_dewormed'           => 'required|boolean',
             'description'           => 'nullable|string',
-            'status'                => 'required|in:available,adopted,deceased,foster_care,under_treatment',
+            'status' => 'required|in:available,adopted,deceased,foster_care,under_treatment,returned',
             'photo'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             
             // 🛡️ A LIBERAÇÃO DA CATRACA ESTÁ AQUI:
@@ -112,7 +112,6 @@ public function index()
 
         // 2. Substituição de Arquivo Seguro (Storage Management)
         if ($request->hasFile('photo')) {
-            // Se já existia uma foto, deletamos do disco para economizar storage e custo na AWS/Servidor
             if ($animal->photo_path) {
                 Storage::disk('public')->delete($animal->photo_path);
             }
@@ -133,25 +132,38 @@ public function index()
         return redirect()->back()->with('success', 'Animal atualizado com sucesso!');
     }
 
-    public function show(Animal $animal)
+    public function show(Request $request, Animal $animal)
     {
-        // 🛡️ Segurança Multi-tenant: Impede que uma ONG acesse o animal de outra
+        // 🛡️ Segurança Multi-tenant
+        // Dica de Arquiteto: Se você implementar o `TenantScope` no Model Animal (como fizemos no AdoptionRequest),
+        // este `if` manual se tornará redundante. O Laravel retornaria um erro 404 automaticamente
+        // caso uma ONG tentasse injetar o ID de um animal que pertence a outra organização.
         if ($animal->ong_id !== auth()->user()->ong_id) {
             abort(403, 'Acesso não autorizado a este dossiê.');
         }
 
         // 📦 Eager Loading: Carrega tudo que precisamos para a Linha do Tempo
-        // Obs: Se você tiver um relacionamento de adoções (ex: 'adoptions.adopter'), 
-        // você pode adicionar ele nesse array depois!
         $animal->load([
             'temporaryHome.address'
         ]);
 
+        // 🧭 Roteamento Inteligente Seguro (Anti Open-Redirect)
+        // Lemos o parâmetro da URL, mas mapeamos APENAS para rotas internas e nomeadas do sistema.
+        $source = $request->query('from');
+        
+        // Rota padrão: Se acessou direto do menu "Animais", volta para o index de animais.
+        $backUrl = route('animals.index'); 
+        
+        // Se a origem confirmada for a tela de interessados, ajustamos o destino de retorno.
+        if ($source === 'requests') {
+            $backUrl = route('adoptions.requests.index');
+        }
+
         return Inertia::render('Animals/Show', [
-            'animal' => $animal
+            'animal' => $animal,
+            'back_url' => $backUrl // 🚀 O payload agora entrega o destino exato e seguro para o React
         ]);
     }
-
     /**
      * Exclui o animal (Soft Delete)
      */

@@ -10,7 +10,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy; // 🚀 Importação do Atributo
+use App\Observers\AnimalObserver; // 🚀 Importação do seu Observer
 
+#[ObservedBy([AnimalObserver::class])]
 class Animal extends Model
 {
     use HasFactory, SoftDeletes, BelongsToOng, HasUuids;
@@ -25,7 +28,7 @@ class Animal extends Model
         'estimated_birth_date',
         'arrival_date',
         'description',
-        'is_castrated', // ou is_neutered, dependendo de como você nomeou
+        'is_neutered', // ou is_neutered, dependendo de como você nomeou
         'is_vaccinated',
         'is_dewormed',
         'status',
@@ -48,6 +51,15 @@ class Animal extends Model
 {
     return $this->belongsTo(TemporaryHome::class);
 }
+
+/**
+     * Relacionamento: Um animal pode ter vários interessados (Leads).
+     */
+
+public function adoptionRequests()
+    {
+        return $this->hasMany(AdoptionRequest::class);
+    }
 
     // ── SCOPES DE NEGÓCIO ────────────────────────────────────────────────────
 

@@ -80,13 +80,13 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 <button
                     onClick={() => setAdocoesOpen((o) => !o)}
                     className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                        isActive('/adoptions') || isActive('/adopters')
+                        isActive('/adoptions') || isActive('/adopters') || isActive('/adoptions/requests')
                             ? 'bg-gray-900 text-white'
                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                 >
                     <span className="flex items-center gap-3">
-                        <span className={isActive('/adoptions') || isActive('/adopters') ? 'text-white' : 'text-gray-400'}>
+                        <span className={isActive('/adoptions') || isActive('/adopters') || isActive('/adoptions/requests') ? 'text-white' : 'text-gray-400'}>
                             <IconAdocoes />
                         </span>
                         Adoções
@@ -96,12 +96,32 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
                 {adocoesOpen && (
                     <div className="ml-8 mt-1 space-y-0.5">
-                        <NavLink href="/adoptions" icon={null} label="Animais Adotados" active={isActive('/adoptions')} />
-                        <NavLink href="/adopters" icon={null} label="Adotantes" active={isActive('/adopters')} />
+                        {/* 1. Topo do Funil: Pessoas que demonstraram interesse na Landing Page */}
+                        <NavLink 
+                            href="/adoptions/requests" 
+                            icon={null} 
+                            label="Interessados" 
+                            active={isActive('/adoptions/requests')} 
+                        />
+                        
+                        {/* 2. Meio do Funil: Pessoas já cadastradas com CPF aprovado */}
+                        <NavLink 
+                            href="/adopters" 
+                            icon={null} 
+                            label="Adotantes" 
+                            active={isActive('/adopters')} 
+                        />
+                        
+                        {/* 3. Fundo do Funil: Histórico dos contratos de adoção efetivados */}
+                        <NavLink 
+                            href="/adoptions" 
+                            icon={null} 
+                            label="Animais Adotados" 
+                            active={isActive('/adoptions')} 
+                        />
                     </div>
                 )}
             </div>
-
            {/* ── Dropdown: Módulo de Insumos ── */}
 <div>
     <button

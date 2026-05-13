@@ -5,13 +5,13 @@ use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\AdopterController;
 use App\Http\Controllers\AdoptionController;
 use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\Admin\AdoptionLeadController;
+use App\Http\Controllers\Admin\AdoptionRequestController;
 use App\Http\Controllers\Vitrine\VitrineController;
 use App\Http\Controllers\Vitrine\VitrineAdoptionController;
 use App\Http\Controllers\TemporaryHomeController;
+use App\Http\Controllers\VolunteerController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
-use App\Http\Controllers\VolunteerController;
 use Inertia\Inertia;
 
 // ── ROTAS DE REDIRECIONAMENTO ─────────────────────────────────────────────────
@@ -39,11 +39,8 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
 Route::middleware(['auth', 'tenant'])->group(function () {
     
     // 🐾 Módulo 1: Prontuários de Animais
-    // 🐾 Módulo 1: Prontuários de Animais
     Route::prefix('animals')->name('animals.')->group(function () {
         Route::get('/', [AnimalController::class, 'index'])->name('index');
-        
-        // 👁️ ADICIONE ESTA LINHA AQUI (A rota do Dossiê!):
         Route::get('/{animal}', [AnimalController::class, 'show'])->name('show');
         
         Route::middleware('throttle:30,1')->group(function () {
@@ -52,6 +49,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
             Route::delete('/{animal}', [AnimalController::class, 'destroy'])->name('destroy');
         });
     });
+
     // 👤 Módulo 2: Adotantes
     Route::prefix('adopters')->name('adopters.')->group(function () {
         Route::get('/', [AdopterController::class, 'index'])->name('index');
@@ -80,20 +78,22 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     });
 
     // 📩 Módulo 5: Solicitações de Adoção (Leads da Vitrine para a ONG gerenciar)
-    Route::get('/painel/solicitacoes', [AdoptionLeadController::class, 'index'])->name('admin.leads.index');
-    Route::post('/painel/solicitacoes/{lead}/aprovar', [AdoptionLeadController::class, 'approve'])->name('admin.leads.approve');
-});
+    Route::prefix('adoptions/requests')->name('adoptions.requests.')->group(function () {
+        Route::get('/', [AdoptionRequestController::class, 'index'])->name('index');
+        Route::patch('/{request}/status', [AdoptionRequestController::class, 'updateStatus'])->name('status');
+    });
+
+}); // <--- AQUI ESTAVA O SEU PROBLEMA. ESTE FECHAMENTO PROVAVELMENTE FOI DELETADO.
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // ... suas outras rotas
-
     Route::resource('temporary-homes', TemporaryHomeController::class)->except(['create', 'show', 'edit']);
 });
 
 // 🦸 Módulo de Voluntários
-    Route::resource('volunteers', \App\Http\Controllers\VolunteerController::class)->except(['create', 'show', 'edit']);
+Route::resource('volunteers', VolunteerController::class)->except(['create', 'show', 'edit']);
 
-    Route::get('/api/cep/{cep}', function ($cep) {
+Route::get('/api/cep/{cep}', function ($cep) {
     // 1. Limpa tudo que não for número
     $cep = preg_replace('/\D/', '', $cep);
     
@@ -112,8 +112,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     return response()->json(['erro' => 'CEP não encontrado'], 404);
 })->name('api.cep');
 
+require __DIR__.'/auth.php';
 
-        require __DIR__.'/auth.php';
 
 // ==============================================================================
 // 🌍 ÁREA PÚBLICA (VITRINE) - Fora do middleware Auth! Totalmente aberta!
@@ -122,18 +122,17 @@ Route::prefix('{slug}')->middleware(['web', 'resolve.tenant'])->group(function (
     
     // Rotas de leitura (Páginas) - Limite tolerante
     Route::middleware('throttle:60,1')->group(function () {
-        
         // 1. A raiz do slug (/gatomestre) agora chama o método 'home'
         Route::get('/', [VitrineController::class, 'home'])->name('vitrine.home'); 
         
         // 2. A página de adoção (/gatomestre/adote) continua chamando 'adote'
         Route::get('/adote', [VitrineController::class, 'adote'])->name('vitrine.adote');
-        
     });
 
-    // Rota de Escrita (Formulário) - Limite SEVERO para evitar spam bots
+    // 📩 Rota de Escrita (Formulário) - Onde o Lead é CRIADO
+    // Limite SEVERO para evitar spam bots
     Route::post('/adote/{animal_uuid}/solicitar', [VitrineAdoptionController::class, 'store'])
         ->middleware('throttle:5,1') 
         ->name('vitrine.adote.store');
-});
 
+}); // <--- OU ESTE FECHAMENTO AQUI FOI DELETADO NA CÓPIA.

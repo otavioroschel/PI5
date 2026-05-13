@@ -9,13 +9,13 @@ const CloseIcon = () => (
     <svg className="w-6 h-6 text-gray-500 hover:text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
 );
 
-// 🛡️ 1. Recebemos a lista de temporaryHomes aqui
 export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHomes = [] }) {
     const fileInputRef = useRef(null);
     const [preview, setPreview] = useState(null);
 
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        _method: 'put',
+    // 🛡️ 1. Adicionamos a função 'transform' do Inertia na desestruturação
+    const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm({
+        _method: 'put', // 🛡️ 2. Method Spoofing: Diz ao Laravel que é um PUT
         name: '',
         species: 'dog',
         gender: 'male',
@@ -29,7 +29,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
         photo: null,
         description: '',
         status: 'available',
-        temporary_home_id: '', // 🛡️ 2. Novo campo no state
+        temporary_home_id: '',
     });
 
     useEffect(() => {
@@ -49,7 +49,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                 photo: null, 
                 description: animal.description || '',
                 status: animal.status || 'available',
-                temporary_home_id: animal.temporary_home_id || '', // 🛡️ 2. Carrega do banco se tiver
+                temporary_home_id: animal.temporary_home_id || '',
             });
             setPreview(animal.photo_url || null);
         }
@@ -80,9 +80,22 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
 
     const submit = (e) => {
         e.preventDefault();
+
+        // 🛡️ 3. Sanitização de Payload: Troca vírgulas por pontos antes de empacotar o JSON/FormData
+        transform((data) => ({
+            ...data,
+            weight: data.weight ? data.weight.toString().replace(',', '.') : null,
+        }));
+
+        // 🛡️ 4. Enviamos como POST, forçando FormData para que o PHP consiga ler o arquivo (photo)
         post(`/animals/${animal.id}`, {
             preserveScroll: true,
+            forceFormData: true, // Obrigatório para envio de arquivos com Method Spoofing
             onSuccess: () => fecharModal(),
+            onError: (erros) => {
+                // 🛡️ 5. Log de Debug: Se a validação barrar novamente, o erro explícito estará no Console (F12)
+                console.error('Falha na validação do Laravel (Erro 422):', erros);
+            }
         });
     };
 
@@ -136,7 +149,9 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Peso</label>
-                                <input type="number" step="0.01" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black" value={data.weight} onChange={e => setData('weight', e.target.value)} />
+                                {/* 🛡️ input type="text" permite que o usuário digite vírgula livremente antes do transform() agir */}
+                                <input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black" value={data.weight} onChange={e => setData('weight', e.target.value)} />
+                                <InputError message={errors.weight} className="mt-1" />
                             </div>
                         </div>
 
@@ -144,10 +159,12 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Data de nascimento</label>
                                 <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 focus:ring-1 focus:ring-black" value={data.estimated_birth_date} onChange={e => setData('estimated_birth_date', e.target.value)} />
+                                <InputError message={errors.estimated_birth_date} className="mt-1" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Data de chegada *</label>
                                 <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 focus:ring-1 focus:ring-black" value={data.arrival_date} onChange={e => setData('arrival_date', e.target.value)} required />
+                                <InputError message={errors.arrival_date} className="mt-1" />
                             </div>
                         </div>
 
@@ -168,6 +185,7 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Sobre</label>
                             <textarea rows="3" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black resize-none" value={data.description} onChange={e => setData('description', e.target.value)}></textarea>
+                            <InputError message={errors.description} className="mt-1" />
                         </div>
 
                         <div className="pb-4">
@@ -179,8 +197,8 @@ export default function EditAnimalModal({ isOpen, onClose, animal, temporaryHome
                                 <option value="foster_care">Lar temporário</option>
                                 <option value="deceased">Óbito</option>
                             </select>
+                            <InputError message={errors.status} className="mt-1" />
 
-                            {/* 🛡️ 3. A MÁGICA CONDICIONAL */}
                             {data.status === 'foster_care' && (
                                 <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in duration-200">
                                     <label className="block text-sm font-bold text-blue-800 mb-1">Selecione o Lar Temporário *</label>

@@ -112,4 +112,4 @@ class AdoptionController extends Controller
             dd($e->getMessage()); 
         }
     }
-} // <--- AQUI FECHA A CLASSE
+} 
